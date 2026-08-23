@@ -1,0 +1,12 @@
+[package]
+name = "stacklens-nvidia"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "NVIDIA GPU and driver collectors for StackLens"
+
+[dependencies]
+csv.workspace = true
+stacklens-core.workspace = true
+stacklens-system.workspace = true

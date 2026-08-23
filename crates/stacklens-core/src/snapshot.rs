@@ -118,4 +118,63 @@ mod tests {
         assert!(matches!(parsed.gpu, Probe::NotImplemented));
         assert!(matches!(parsed.torch, Probe::NotImplemented));
     }
+
+    #[test]
+    fn phase1b_snapshot_with_unimplemented_cuda_still_loads() {
+        let json = include_str!("../../../fixtures/snapshot/phase1b.json");
+        let parsed = EnvironmentSnapshot::from_json_str(json).unwrap();
+        assert_eq!(parsed.schema_version, 1);
+        assert!(matches!(parsed.cuda, Probe::NotImplemented));
+        assert!(matches!(parsed.libraries, Probe::NotImplemented));
+        assert!(matches!(parsed.torch, Probe::NotImplemented));
+        assert!(parsed.system.as_collected().is_some());
+    }
+
+    #[test]
+    fn phase1a_placeholder_cuda_object_defaults() {
+        let json = r#"{
+            "schema_version": 1,
+            "stacklens_version": "0.1.0",
+            "captured_at": "2026-01-01T00:00:00Z",
+            "cuda": {
+                "status": "collected",
+                "data": {
+                    "driver_cuda_version": "12.8",
+                    "toolkit_version": "12.4",
+                    "nvcc_version": "12.4.131",
+                    "toolkit_paths": ["/usr/local/cuda"],
+                    "runtime_libraries": []
+                }
+            }
+        }"#;
+        let parsed = EnvironmentSnapshot::from_json_str(json).unwrap();
+        let cuda = parsed.cuda.as_collected().expect("cuda");
+        assert!(cuda.toolkits.is_empty());
+        assert!(cuda.driver_api_capability.is_none());
+    }
+
+    #[test]
+    fn phase1a_collected_probe_without_issues_still_loads() {
+        let json = r#"{
+            "schema_version": 1,
+            "stacklens_version": "0.1.0",
+            "captured_at": "2026-01-01T00:00:00Z",
+            "system": {
+                "status": "collected",
+                "data": {
+                    "os": "linux",
+                    "arch": "x86_64",
+                    "family": "unix",
+                    "pointer_width": 64,
+                    "endian": "little",
+                    "container": "not_detected",
+                    "wsl": "not_detected"
+                }
+            }
+        }"#;
+        let parsed = EnvironmentSnapshot::from_json_str(json).unwrap();
+        let system = parsed.system.as_collected().expect("system");
+        assert_eq!(system.os, "linux");
+        assert!(parsed.system.issues().is_empty());
+    }
 }

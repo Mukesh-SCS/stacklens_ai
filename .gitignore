@@ -2,6 +2,15 @@
 debug
 target
 /target/
+/target-check/
+/target-msrv/
+/target-b/
+/target-c/
+/target-msrv2/
+/target-d/
+/target-msrv-1c/
+/target-e/
+/target-f/
 
 # rustfmt backups
 **/*.rs.bk

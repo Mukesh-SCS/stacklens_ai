@@ -3,6 +3,7 @@
 mod env;
 mod linux;
 mod parse;
+pub mod process;
 
 use stacklens_core::model::SystemInfo;
 use stacklens_core::Endian;

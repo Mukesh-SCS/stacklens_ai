@@ -35,14 +35,23 @@ A problem at any layer can surface as a misleading error at another. StackLens g
 - Evidence before conclusions
 - No required Python, Node.js, or JVM runtime
 - Offline-capable
-- Safe reporting (environment collection is allowlisted; no telemetry)
+- No telemetry
+- Credential-like environment variables are not collected by default
 - Cross-platform roadmap; Linux is first
 
 ## Current status
 
-Phase 1A foundation. The `stacklens` binary builds, parses commands, collects host/OS information, writes versioned JSON snapshots, and diffs snapshots.
+Phase 1C. The `stacklens` binary collects host/OS information, Linux NVIDIA GPU/driver evidence (sysfs, `/proc/driver/nvidia/version`, and `nvidia-smi` CSV queries), and Linux CUDA toolkit/runtime evidence. It writes versioned JSON snapshots and diffs them.
 
-It does **not** yet inspect GPUs, CUDA, ELF libraries, or PyTorch. Those commands exist so the CLI surface is stable; they report that the work is not implemented rather than inventing results.
+StackLens treats these as separate observations, not one "CUDA version":
+
+- NVIDIA driver
+- driver CUDA API capability
+- CUDA Toolkit
+- nvcc
+- CUDA runtime (`libcudart`)
+
+It does **not** yet inspect ELF loader resolution, PyTorch, or diagnostic rules. CUDA compatibility output is a data foundation only and is not a diagnosis.
 
 ## Phase 1
 
@@ -60,12 +69,12 @@ See [project_plan.md](project_plan.md) for milestones 1A–1F and later phases.
 
 | Command | Status | Purpose |
 | --- | --- | --- |
-| `stacklens doctor` | Partial | Host summary; GPU/CUDA/library/PyTorch diagnosis not implemented |
-| `stacklens gpu` | Planned | NVIDIA GPU and driver inspection |
-| `stacklens cuda` | Planned | CUDA toolkit, runtime, and environment |
+| `stacklens doctor` | Partial | Host, NVIDIA/GPU, and CUDA facts; no compatibility conclusions |
+| `stacklens gpu` | Implemented | NVIDIA GPU and driver inspection from sysfs, `/proc`, and `nvidia-smi` |
+| `stacklens cuda` | Partial | CUDA toolkit, nvcc, runtime-candidate, and environment discovery |
 | `stacklens libs [PATH]` | Planned | ELF shared-library inspection |
 | `stacklens torch` | Planned | PyTorch / LibTorch inspection |
-| `stacklens snapshot` | Partial | JSON snapshot of collected host data; GPU/CUDA/torch fields are `not_implemented` |
+| `stacklens snapshot` | Partial | Host, NVIDIA/GPU, and CUDA fields; `libraries` and `torch` remain `not_implemented` |
 | `stacklens diff <LEFT> <RIGHT>` | Partial | Structural diff of two snapshots |
 
 ```bash
@@ -84,7 +93,7 @@ stacklens diff server-good.json server-bad.json
 
 This is useful when a machine that worked yesterday does not work today, or when comparing a known-good host to a broken one. The diff is meant to highlight driver, CUDA, library path, and runtime differences instead of requiring a manual side-by-side review.
 
-Today, `snapshot` and `diff` operate on the host fields that are actually collected. They will gain GPU, CUDA, and library fields as those collectors land.
+`snapshot` currently includes host data, NVIDIA/GPU probes, and CUDA discovery. Library and PyTorch fields remain `not_implemented`.
 
 ## Long-term roadmap
 
@@ -115,7 +124,15 @@ cargo fmt --all
 cargo clippy --workspace --all-targets --all-features
 ```
 
-CI runs fmt, clippy (`-D warnings`), and the workspace tests. Tests do not require an NVIDIA GPU.
+CI runs fmt, clippy (`-D warnings`), workspace tests, and a check against the declared MSRV. Tests do not require an NVIDIA GPU.
+
+## Privacy
+
+Environment collection is allowlisted. Tokens, API keys, and similar credentials are not read.
+
+That does **not** make a raw snapshot safe to publish. Allowlisted values such as `PATH`, `LD_LIBRARY_PATH`, `PYTHONPATH`, `CONDA_PREFIX`, `VIRTUAL_ENV`, and `TORCH_HOME` often contain usernames and local filesystem paths.
+
+Review snapshots before sharing them. Stronger path redaction belongs to the future `bundle` / report work.
 
 ## Contributing
 

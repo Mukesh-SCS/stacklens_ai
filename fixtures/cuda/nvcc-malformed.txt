@@ -1,0 +1,3 @@
+this is not nvcc output
+version 12.8 maybe
+no compilation tools line

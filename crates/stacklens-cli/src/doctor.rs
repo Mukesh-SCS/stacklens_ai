@@ -8,7 +8,7 @@ pub fn run(stdout: &mut dyn Write) -> anyhow::Result<()> {
     let snapshot = current_snapshot();
 
     writeln!(stdout, "StackLens doctor")?;
-    writeln!(stdout, "Status: early development (Phase 1A)")?;
+    writeln!(stdout, "Status: early development (Phase 1C)")?;
     writeln!(stdout)?;
 
     match snapshot.system.as_collected() {
@@ -55,11 +55,61 @@ pub fn run(stdout: &mut dyn Write) -> anyhow::Result<()> {
     }
 
     writeln!(stdout)?;
+    writeln!(stdout, "GPU")?;
+    match snapshot.gpu.as_collected() {
+        Some(info) if info.devices.is_empty() => {
+            writeln!(stdout, "  no device inventory")?;
+        }
+        Some(info) => {
+            for (index, device) in info.devices.iter().enumerate() {
+                writeln!(
+                    stdout,
+                    "  [{}] {}  pci={}  uuid={}",
+                    device.index.unwrap_or(index as u32),
+                    device.name.as_deref().unwrap_or("(name unavailable)"),
+                    device.pci_bus_id.as_deref().unwrap_or("?"),
+                    device.uuid.as_deref().unwrap_or("?")
+                )?;
+            }
+        }
+        None => writeln!(stdout, "  not detected")?,
+    }
+    for issue in snapshot.gpu.issues() {
+        writeln!(stdout, "  issue: {} ({})", issue.detail, issue.source)?;
+    }
+
+    writeln!(stdout)?;
+    writeln!(stdout, "NVIDIA driver")?;
+    match snapshot.nvidia_driver.as_collected() {
+        Some(info) => {
+            if let Some(version) = info.version.as_deref() {
+                writeln!(stdout, "  version: {version}")?;
+            } else {
+                writeln!(stdout, "  version: (sources disagree)")?;
+            }
+            if let Some(kernel) = info.kernel_module_version.as_deref() {
+                writeln!(stdout, "  kernel_module: {kernel}")?;
+            }
+            if let Some(userspace) = info.userspace_version.as_deref() {
+                writeln!(stdout, "  userspace: {userspace}")?;
+            }
+        }
+        None => writeln!(stdout, "  not detected")?,
+    }
+    for issue in snapshot.nvidia_driver.issues() {
+        writeln!(stdout, "  issue: {} ({})", issue.detail, issue.source)?;
+    }
+
+    writeln!(stdout)?;
+    crate::cuda::write_doctor_summary(stdout, &snapshot.cuda)?;
+
+    writeln!(stdout)?;
     writeln!(stdout, "Not yet implemented")?;
-    writeln!(stdout, "  gpu, cuda, libs, torch, diagnostic rules")?;
+    writeln!(stdout, "  libs, torch, diagnostic rules")?;
     writeln!(stdout)?;
     writeln!(stdout, "Findings")?;
     writeln!(stdout, "  none")?;
+    writeln!(stdout, "Diagnostic rules: not implemented")?;
     Ok(())
 }
 

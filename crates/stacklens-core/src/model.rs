@@ -62,9 +62,21 @@ pub struct GpuInfo {
     pub devices: Vec<GpuDevice>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum GpuVendor {
+    Nvidia,
+    Amd,
+    Intel,
+    #[default]
+    Unknown,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct GpuDevice {
+    #[serde(default)]
+    pub vendor: GpuVendor,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub index: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,7 +86,11 @@ pub struct GpuDevice {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pci_bus_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub compute_capability: Option<String>,
+    pub pci_vendor_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pci_device_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cuda_compute_capability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_bytes: Option<u64>,
 }
@@ -82,24 +98,21 @@ pub struct GpuDevice {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub struct NvidiaDriverInfo {
+    /// Present when the kernel-module and userspace observations agree, or when
+    /// only one source produced a version.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cuda_driver_version: Option<String>,
+    pub kernel_module_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub userspace_version: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "snake_case")]
-pub struct CudaInfo {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub driver_cuda_version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub toolkit_version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub nvcc_version: Option<String>,
-    pub toolkit_paths: Vec<String>,
-    pub runtime_libraries: Vec<LibraryCandidate>,
-}
+pub use crate::cuda::{
+    CudaEnvironment, CudaInfo, CudaMajorFamilyEvidence, CudaRuntimeLibrary, CudaSelectors,
+    CudaToolkit, CudaVersion, DriverApiCapability, ForwardCompatPackage, NvccInfo, PathSelector,
+    RuntimeLibrarySource, ToolkitVersionSource,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]

@@ -15,4 +15,6 @@ anyhow.workspace = true
 clap.workspace = true
 serde_json.workspace = true
 stacklens-core.workspace = true
+stacklens-cuda.workspace = true
+stacklens-nvidia.workspace = true
 stacklens-system.workspace = true

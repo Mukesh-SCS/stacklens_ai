@@ -4,8 +4,10 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 mod capture;
+mod cuda;
 mod diff;
 mod doctor;
+mod gpu;
 mod snapshot;
 
 #[derive(Parser, Debug)]
@@ -24,9 +26,9 @@ pub struct Cli {
 pub enum Command {
     /// Aggregate system diagnosis
     Doctor,
-    /// Inspect NVIDIA GPU hardware and driver information [not implemented]
+    /// Inspect NVIDIA GPU hardware and driver information
     Gpu,
-    /// Inspect CUDA toolkit, runtime, and environment [not implemented]
+    /// Inspect CUDA toolkit, runtime, and environment
     Cuda,
     /// Inspect native shared-library dependencies [not implemented]
     Libs {
@@ -49,11 +51,8 @@ pub enum Command {
 pub fn execute(cli: Cli, stdout: &mut dyn Write) -> anyhow::Result<()> {
     match cli.command {
         Command::Doctor => doctor::run(stdout),
-        Command::Gpu => not_implemented(
-            stdout,
-            "NVIDIA GPU and driver inspection is not implemented yet.",
-        ),
-        Command::Cuda => not_implemented(stdout, "CUDA toolkit inspection is not implemented yet."),
+        Command::Gpu => gpu::run(stdout),
+        Command::Cuda => cuda::run(stdout),
         Command::Libs { path } => libs(stdout, path.as_deref()),
         Command::Torch => not_implemented(
             stdout,
@@ -105,15 +104,41 @@ mod tests {
         let snapshot =
             EnvironmentSnapshot::from_json_str(std::str::from_utf8(&buf).unwrap()).unwrap();
         assert_eq!(snapshot.schema_version, 1);
-        assert!(matches!(
+        assert!(!matches!(
             snapshot.gpu,
+            stacklens_core::Probe::NotImplemented
+        ));
+        assert!(!matches!(
+            snapshot.cuda,
+            stacklens_core::Probe::NotImplemented
+        ));
+        assert!(snapshot.cuda.as_collected().is_some());
+        assert!(matches!(
+            snapshot.torch,
             stacklens_core::Probe::NotImplemented
         ));
         assert!(snapshot.system.as_collected().is_some());
     }
 
     #[test]
-    fn gpu_does_not_invent_devices() {
+    fn cuda_does_not_print_placeholder_status() {
+        let mut buf = Vec::new();
+        execute(
+            Cli {
+                command: Command::Cuda,
+            },
+            &mut buf,
+        )
+        .unwrap();
+        let text = String::from_utf8(buf).unwrap();
+        assert!(!text.to_ascii_lowercase().contains("not implemented"));
+        assert!(text.contains("CUDA"));
+        assert!(text.contains("Driver API capability"));
+        assert!(text.contains("Toolkits"));
+    }
+
+    #[test]
+    fn gpu_does_not_print_placeholder_status() {
         let mut buf = Vec::new();
         execute(
             Cli {
@@ -123,8 +148,8 @@ mod tests {
         )
         .unwrap();
         let text = String::from_utf8(buf).unwrap();
-        assert!(text.contains("not implemented"));
-        assert!(!text.to_ascii_lowercase().contains("rtx"));
+        assert!(!text.contains("not implemented"));
+        assert!(text.contains("Sources"));
     }
 
     #[test]

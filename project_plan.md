@@ -15,7 +15,7 @@ The product is a standalone Rust binary. A user downloads it, runs it, and gets 
 - Findings are deterministic: the same inputs produce the same report.
 - Reports are reproducible and serializable.
 - No hidden telemetry. Diagnostics do not make network requests unless a future feature explicitly requires it and documents that fact.
-- Safe by default. Environment collection is allowlist-based. Report bundling must redact secrets.
+- Safe by default. Credential-like environment variables are not collected. Raw snapshots may still contain local filesystem paths and usernames; they are not automatically safe to publish. Report bundling must redact secrets and normalize home paths.
 - Useful without internet access.
 - One standalone Rust binary. No required Python, Node.js, or JVM runtime.
 - Observation, inference, and recommendation stay distinct. A missing library is an observation. "This is why the import failed" is an inference and needs evidence. "Change LD_LIBRARY_PATH" is a recommendation.
@@ -72,20 +72,21 @@ stacklens/
 
 Do not create a crate until it has a real boundary and enough code to justify a package. Empty collector crates lock names and add workspace noise without helping.
 
-Phase 1A creates three crates:
+Current crates:
 
 | Crate | Role |
 | --- | --- |
 | `stacklens-core` | Shared types, snapshot schema, probe states, findings, snapshot diff |
 | `stacklens-system` | Host observations: OS, kernel, container/WSL hints, allowlisted environment |
+| `stacklens-nvidia` | NVIDIA PCI/sysfs, `/proc` driver version, `nvidia-smi` execution/parsing, merge |
+| `stacklens-cuda` | CUDA toolkit/runtime discovery, nvcc, environment selectors, compatibility foundation |
 | `stacklens-cli` | `stacklens` binary, clap commands, text/JSON rendering |
 
 Crates that appear in the long-term diagram are introduced when their collector or renderer is implemented:
 
 | Future crate | Created when |
 | --- | --- |
-| `stacklens-nvidia` / `stacklens-gpu` | Phase 1B GPU and driver inspection |
-| `stacklens-cuda` | Phase 1C CUDA toolkit/runtime inspection |
+| `stacklens-gpu` | If vendor-neutral GPU collection outgrows `stacklens-core` |
 | `stacklens-elf` | Phase 1D ELF parsing and loader modeling |
 | `stacklens-pytorch` | Phase 1E filesystem/package inspection |
 | `stacklens-rules` | Phase 1F deterministic rule evaluation |
@@ -140,15 +141,15 @@ stacklens diff
 
 Aggregate diagnosis. Collects from Phase 1 subsystems and presents important findings in one report.
 
-Phase 1A reports host observations and states clearly that GPU, CUDA, library, PyTorch, and rule evaluation are not implemented.
+Reports host observations plus collected NVIDIA/GPU and CUDA facts. Library, PyTorch, and rule evaluation are not implemented. An empty findings list does not mean the system is healthy.
 
 ### `stacklens gpu`
 
-NVIDIA GPU hardware and driver information. Future evidence includes detected GPUs, model, driver version, PCI/device identity, compute capability when it can be obtained deterministically, driver state, and multi-GPU layout.
+NVIDIA GPU hardware and driver information from Linux sysfs, `/proc/driver/nvidia/version`, and `nvidia-smi` CSV queries. Marketing names are taken from `nvidia-smi` when available, not inferred from PCI IDs.
 
 ### `stacklens cuda`
 
-CUDA configuration. Future evidence includes driver CUDA capability, toolkit installs, `nvcc`, runtime libraries, install paths, environment, library candidates, and version inconsistencies that can be established from those facts.
+CUDA configuration. Collects driver CUDA API capability, toolkit installs, `nvcc`, runtime-library candidates, install paths, environment selectors, and forward-compat package presence. Does not resolve the dynamic loader or emit compatibility diagnoses.
 
 ### `stacklens libs`
 
@@ -178,7 +179,7 @@ Structured, JSON-serializable representation of the environment.
 stacklens snapshot > machine.json
 ```
 
-The schema includes `schema_version` from the start. Fields that cannot be collected yet are recorded as probe states (`not_implemented`, `not_detected`, and so on). Snapshots must not invent GPU, CUDA, or PyTorch facts.
+The schema includes `schema_version` from the start. Fields that cannot be collected yet are recorded as probe states (`not_implemented`, `not_detected`, and so on). Snapshots must not invent GPU, CUDA, or PyTorch facts. Phase 1C populates `cuda`; `libraries` and `torch` remain `not_implemented`.
 
 ### `stacklens diff`
 
@@ -221,7 +222,7 @@ Docker detection
 
 Not all of this is implemented in the first coding pass.
 
-### Phase 1A: Foundation (this pass)
+### Phase 1A: Foundation (complete)
 
 - Cargo workspace
 - CLI surface for all Phase 1 commands
@@ -234,20 +235,25 @@ Not all of this is implemented in the first coding pass.
 - Tests that do not require NVIDIA hardware
 - CI for fmt, clippy, and tests
 
-### Phase 1B: NVIDIA inspection
+### Phase 1B: NVIDIA inspection (complete)
 
-- GPU discovery
-- Driver inspection
-- Deterministic NVIDIA metadata gathering
-- Fixture-driven parsers for vendor command output
+- GPU discovery via sysfs PCI class/vendor
+- Driver version from `/proc/driver/nvidia/version` and `nvidia-smi`
+- Bounded `nvidia-smi` CSV queries (`index,name,uuid,pci.bus_id,memory.total,driver_version`; optional `compute_cap`)
+- Merge by normalized PCI bus ID, then UUID
+- Deterministic GPU sort
+- Fixture-driven parsers; default tests do not require NVIDIA hardware
 
-### Phase 1C: CUDA inspection
+### Phase 1C: CUDA inspection (complete)
 
-- Toolkit installs
-- `nvcc`
-- Runtime libraries
-- Environment relationships
-- Version comparisons that the collected facts can support
+- Toolkit installs from bounded search locations and `CUDA_HOME` / `CUDA_PATH` / `CUDA_ROOT`
+- `nvcc` via PATH search and bounded `nvcc --version`
+- Runtime-library candidates (`libcudart.so*`) in toolkit dirs and `LD_LIBRARY_PATH` entries
+- Environment selectors kept separate when they disagree
+- Driver CUDA API capability kept distinct from toolkit version
+- Forward-compat package presence (not loader activation)
+- Isolated major-family driver-branch table as a compatibility data foundation only
+- Version comparisons use integer `CudaVersion` components, not floats
 
 ### Phase 1D: ELF / library inspection
 
@@ -417,7 +423,7 @@ The report path must strip secrets. Never expose:
 
 Safe diagnostic variables (`CUDA_HOME`, `LD_LIBRARY_PATH`, `CUDA_VISIBLE_DEVICES`, and similar) are collected by allowlist. Everything else is omitted unless a later design introduces an explicit, redacted dump.
 
-Paths that embed a username or home directory should be normalizable during redaction so a report can be shared without leaking account names.
+Allowlisted values can still contain usernames and local filesystem paths. Raw `stacklens snapshot` output is not automatically safe to publish. Review it before sharing. Path redaction belongs to the future report/bundle work.
 
 ## 10. Rule system
 
@@ -532,3 +538,5 @@ These should be decided before NVIDIA collection lands:
 2. **Where GPU types grow.** Keep `GpuInfo` / `NvidiaDriverInfo` in `stacklens-core`. Put parsers and probes in a new `stacklens-nvidia` crate once they exist.
 3. **Command output stability.** Treat `nvidia-smi` text as an unstable interface. Parser tests must pin fixtures; prefer query flags that return compact, documented fields.
 4. **Privilege.** Some device nodes and proc files are unreadable without extra rights. That is `permission_denied`, not a crash.
+
+Declared MSRV is Rust 1.85. Current clap/clap_lex require edition 2024, which 1.80 cannot build. Pinning an older clap tree to keep 1.80 was not worth the lockfile churn.
