@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "stacklens_version": "0.1.0",
+  "captured_at": "2026-01-01T00:00:00Z",
+  "system": {
+    "status": "collected",
+    "data": {
+      "os": "linux",
+      "arch": "x86_64",
+      "family": "unix",
+      "pointer_width": 64,
+      "endian": "little",
+      "os_id": "ubuntu",
+      "os_pretty_name": "Ubuntu 24.04.1 LTS",
+      "os_version_id": "24.04",
+      "kernel_release": "6.8.0-40-generic",
+      "container": "not_detected",
+      "wsl": "not_detected"
+    }
+  },
+  "environment": {
+    "status": "collected",
+    "data": {
+      "variables": {
+        "CUDA_HOME": "/usr/local/cuda-12.8",
+        "LD_LIBRARY_PATH": "/usr/local/cuda-12.8/lib64"
+      }
+    }
+  },
+  "gpu": { "status": "not_implemented" },
+  "nvidia_driver": { "status": "not_implemented" },
+  "cuda": { "status": "not_implemented" },
+  "libraries": { "status": "not_implemented" },
+  "torch": { "status": "not_implemented" }
+}

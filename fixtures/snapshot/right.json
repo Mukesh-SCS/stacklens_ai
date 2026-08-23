@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "stacklens_version": "0.1.0",
+  "captured_at": "2026-01-02T00:00:00Z",
+  "system": {
+    "status": "collected",
+    "data": {
+      "os": "windows",
+      "arch": "x86_64",
+      "family": "windows",
+      "pointer_width": 64,
+      "endian": "little",
+      "os_id": "windows",
+      "container": "not_inspected",
+      "wsl": "not_inspected"
+    }
+  },
+  "environment": {
+    "status": "collected",
+    "data": {
+      "variables": {
+        "CUDA_HOME": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6"
+      }
+    }
+  },
+  "gpu": { "status": "not_implemented" },
+  "nvidia_driver": { "status": "not_implemented" },
+  "cuda": { "status": "not_implemented" },
+  "libraries": { "status": "not_implemented" },
+  "torch": { "status": "not_implemented" }
+}

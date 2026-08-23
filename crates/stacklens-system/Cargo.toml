@@ -1,0 +1,10 @@
+[package]
+name = "stacklens-system"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Host and environment collectors for StackLens"
+
+[dependencies]
+stacklens-core.workspace = true
