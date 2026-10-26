@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "stacklens_version": "0.1.0",
+  "captured_at": "2026-10-26T10:00:00Z",
+  "system": {
+    "status": "collected",
+    "data": {
+      "os": "linux",
+      "arch": "x86_64",
+      "family": "unix",
+      "pointer_width": 64,
+      "endian": "little",
+      "container": "not_detected",
+      "wsl": "not_detected"
+    }
+  },
+  "environment": {"status": "collected", "data": {"variables": {}}},
+  "gpu": {"status": "not_detected"},
+  "nvidia_driver": {
+    "status": "collected",
+    "data": {
+      "kernel_module_version": "535.129.03",
+      "userspace_version": "550.54.14"
+    }
+  },
+  "cuda": {"status": "collected", "data": {}},
+  "libraries": {"status": "not_implemented"},
+  "torch": {"status": "not_implemented"}
+}

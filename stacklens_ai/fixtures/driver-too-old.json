@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "stacklens_version": "0.1.0",
+  "captured_at": "2026-10-26T10:00:00Z",
+  "system": {
+    "status": "collected",
+    "data": {
+      "os": "linux",
+      "arch": "x86_64",
+      "family": "unix",
+      "pointer_width": 64,
+      "endian": "little",
+      "os_id": "ubuntu",
+      "container": "not_detected",
+      "wsl": "not_detected"
+    }
+  },
+  "environment": {"status": "collected", "data": {"variables": {}}},
+  "gpu": {"status": "not_detected"},
+  "nvidia_driver": {
+    "status": "collected",
+    "data": {
+      "version": "470.57.02",
+      "kernel_module_version": "470.57.02",
+      "userspace_version": "470.57.02"
+    }
+  },
+  "cuda": {
+    "status": "collected",
+    "data": {
+      "toolkits": [
+        {
+          "path": "/usr/local/cuda-12.4",
+          "is_symlink": false,
+          "version": {"major": 12, "minor": 4, "raw": "12.4"},
+          "nvcc_present": true,
+          "libcudart_present": true
+        }
+      ],
+      "compatibility": [
+        {
+          "cuda_major": 12,
+          "documented_minimum_driver_branch": 525,
+          "observed_driver_branch": 470,
+          "driver_branch_meets_documented_minimum": false,
+          "source": "NVIDIA CUDA compatibility major-family guidance",
+          "note": "Synthetic fixture: branch below documented minimum"
+        }
+      ]
+    }
+  },
+  "libraries": {"status": "not_implemented"},
+  "torch": {"status": "not_implemented"}
+}

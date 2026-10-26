@@ -6,6 +6,22 @@ It inspects GPU and AI runtime environments and reports evidence for configurati
 
 Status: **early development**
 
+## StackLens AI hackathon companion (October 2026)
+
+The optional [StackLens AI web companion](stacklens_ai/README.md) accepts the
+existing JSON snapshot format, applies conservative deterministic rules, and
+can request evidence-linked NVIDIA Nemotron explanations through **Nebius Token
+Factory**. The original Rust CLI stays offline-capable; model inference is
+explicitly opt-in and is not required for the CLI.
+
+Quick start: `python3 -m stacklens_ai.server` from the repository root.
+Open `http://127.0.0.1:8000`, load one of the three synthetic examples, and
+select **Analyze snapshot**. Configure server-side `NEBIUS_API_KEY` for live
+model calls. Without a key the UI correctly reports deterministic-only mode.
+
+See the companion README for API configuration, privacy caveats, tests, and
+deployment details.
+
 ## Motivation
 
 AI compute failures are usually stack failures, not single-package failures:

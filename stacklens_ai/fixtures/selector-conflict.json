@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "stacklens_version": "0.1.0",
+  "captured_at": "2026-10-26T10:00:00Z",
+  "system": {
+    "status": "collected",
+    "data": {
+      "os": "linux",
+      "arch": "x86_64",
+      "family": "unix",
+      "pointer_width": 64,
+      "endian": "little",
+      "container": "not_detected",
+      "wsl": "not_detected"
+    }
+  },
+  "environment": {"status": "collected", "data": {"variables": {}}},
+  "gpu": {"status": "not_detected"},
+  "nvidia_driver": {"status": "not_detected"},
+  "cuda": {
+    "status": "collected",
+    "data": {
+      "selectors": {
+        "cuda_home": {"path": "/usr/local/cuda-12.4", "is_symlink": false},
+        "cuda_path": {"path": "/usr/local/cuda-12.8", "is_symlink": false}
+      },
+      "runtime_libraries": [
+        {"path": "/opt/a/libcudart.so.12", "source": "toolkit"},
+        {"path": "/opt/b/libcudart.so.12", "source": "ld_library_path"}
+      ]
+    }
+  },
+  "libraries": {"status": "not_implemented"},
+  "torch": {"status": "not_implemented"}
+}

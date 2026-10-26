@@ -30,3 +30,8 @@ target
 .DS_Store
 Thumbs.db
 *~
+
+# Python companion
+__pycache__/
+*.py[cod]
+.venv/

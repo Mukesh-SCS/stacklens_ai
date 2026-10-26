@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="StackLens AI: evidence-grounded GPU and CUDA diagnostics with NVIDIA Nemotron on Nebius Token Factory.">
+  <title>StackLens AI | Evidence-grounded GPU diagnostics</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brandmark">S<span class="branddot">.</span></span><span>StackLens <b>AI</b></span></div>
+    <div class="top-right"><span class="version">HACKATHON BUILD · 2026</span><span id="live-status" class="status">Checking model...</span></div>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">RUNTIME FORENSICS / NVIDIA COMPUTE</p>
+      <h1>Stop guessing.<br><span>Inspect the evidence.</span></h1>
+      <p class="lede">Diagnose GPU, CUDA, and NVIDIA driver configuration issues with deterministic checks and optional evidence-linked explanations from Nemotron on Nebius.</p>
+      <div class="chips"><span>Rust snapshot format</span><span>NVIDIA Nemotron</span><span>Nebius Token Factory</span><span>Evidence first</span></div>
+    </section>
+    <section class="workspace" aria-label="Diagnostic workspace">
+      <div class="panel input-panel">
+        <div class="panel-head"><div><p class="step">01 / INPUT</p><h2>Choose a snapshot</h2></div><span class="counter">SCHEMA V1</span></div>
+        <p class="help">Load a synthetic scenario, upload a StackLens JSON snapshot, or paste JSON directly.</p>
+        <div class="sample-grid">
+          <button type="button" data-example="driver" class="sample active"><span class="sample-icon">01</span><strong>Outdated driver</strong><small>CUDA family minimum</small></button>
+          <button type="button" data-example="selectors" class="sample"><span class="sample-icon">02</span><strong>Conflicting paths</strong><small>CUDA selectors</small></button>
+          <button type="button" data-example="components" class="sample"><span class="sample-icon">03</span><strong>Driver mismatch</strong><small>Kernel vs userspace</small></button>
+        </div>
+        <div class="labelrow"><label for="snapshot">Environment snapshot JSON</label><label class="upload" for="file"><span>↥</span> Upload .json</label></div>
+        <input id="file" type="file" accept=".json,application/json" hidden>
+        <textarea id="snapshot" spellcheck="false" placeholder="Paste a StackLens snapshot here..." aria-label="Environment snapshot JSON"></textarea>
+        <div class="action-row">
+          <label class="toggle"><input id="use-ai" type="checkbox" checked><span>Explain with Nemotron</span></label>
+          <button class="primary" type="button" id="analyze">Analyze snapshot <span>↗</span></button>
+        </div>
+        <p class="privacy">Privacy: submitted snapshots reach this demo server. Only curated, path-free findings are sent onward to Nemotron. Do not upload confidential snapshots to a public deployment.</p>
+      </div>
+      <div class="panel report-panel">
+        <div class="panel-head"><div><p class="step">02 / ANALYSIS</p><h2>Diagnostic report</h2></div><span id="report-state" class="counter">READY</span></div>
+        <div id="empty" class="empty"><div class="orbit"><span>⌕</span></div><h3>Waiting for evidence</h3><p>Choose a scenario and run the analysis to see grounded findings, verification steps, and optional model explanations.</p></div>
+        <div id="report" hidden><div id="summary" class="summary"></div><div id="findings"></div><div class="model-box"><div class="model-heading">NVIDIA NEMOTRON <span id="model-state"></span></div><div id="model-results"></div></div><p class="note" id="limitations"></p></div>
+      </div>
+    </section>
+    <section class="method">
+      <div><span class="method-num">01</span><h3>Observe</h3><p>Collect actual host, driver, and CUDA configuration using the standalone Rust CLI.</p></div>
+      <div><span class="method-num">02</span><h3>Verify</h3><p>Run deterministic, bounded rules that separate confirmed facts from potential causes.</p></div>
+      <div><span class="method-num">03</span><h3>Explain</h3><p>Use an open NVIDIA model on Nebius to translate those findings into actionable engineering context.</p></div>
+    </section>
+  </main>
+  <footer><span>STACKLENS AI · AN OPTIONAL COMPANION TO THE OFFLINE RUST TOOL</span><span>Diagnostic assistance is not proof of full compatibility.</span></footer>
+</body>
+</html>
