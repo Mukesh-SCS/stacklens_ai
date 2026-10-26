@@ -35,7 +35,7 @@ class ServerTests(unittest.TestCase):
             html = response.read().decode("utf-8")
             headers = dict(response.headers)
         self.assertIn("StackLens AI", html)
-        self.assertIn("Evidence-Grounded", html)
+        self.assertIn("evidence-grounded", html.lower())
         self.assertEqual(headers.get("X-Content-Type-Options"), "nosniff")
         self.assertIn("Content-Security-Policy", headers)
 
