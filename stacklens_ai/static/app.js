@@ -1,138 +1,258 @@
 "use strict";
+
 const el = (id) => document.getElementById(id);
 const sampleButtons = [...document.querySelectorAll("[data-example]")];
-const severityOrder = { high: "HIGH", medium: "REVIEW", low: "INFO" };
+const severityLabels = { high: "HIGH SEVERITY", medium: "REVIEW REQUIRED", low: "INFORMATIONAL" };
 
-function node(tag, cls, value) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (value !== undefined) e.textContent = value;
-  return e;
+function createNode(tag, className, textContent) {
+  const elem = document.createElement(tag);
+  if (className) elem.className = className;
+  if (textContent !== undefined) elem.textContent = textContent;
+  return elem;
 }
-function appendText(parent, tag, cls, value) {
-  const child = node(tag, cls, value);
-  parent.appendChild(child);
-  return child;
+
+function copyToClipboard(text, btnElem) {
+  navigator.clipboard.writeText(text).then(() => {
+    const originalText = btnElem.textContent;
+    btnElem.textContent = "Copied!";
+    btnElem.style.borderColor = "var(--lime)";
+    setTimeout(() => {
+      btnElem.textContent = originalText;
+      btnElem.style.borderColor = "";
+    }, 1800);
+  }).catch(() => {
+    // Fallback if clipboard API is blocked
+    const input = document.createElement("input");
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand("copy");
+    document.body.removeChild(input);
+    btnElem.textContent = "Copied!";
+    setTimeout(() => { btnElem.textContent = "Copy Command"; }, 1800);
+  });
 }
 
 async function loadExample(name) {
   try {
     const response = await fetch("/api/examples/" + encodeURIComponent(name));
-    if (!response.ok) throw new Error("Example not found");
-    el("snapshot").value = JSON.stringify(await response.json(), null, 2);
-    sampleButtons.forEach((button) => button.classList.toggle("active", button.dataset.example === name));
+    if (!response.ok) throw new Error("Scenario fixture not found");
+    const json = await response.json();
+    el("snapshot").value = JSON.stringify(json, null, 2);
+    sampleButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.example === name));
   } catch (error) {
-    setError("Unable to load the sample snapshot: " + error.message);
+    showError("Failed to load scenario: " + error.message);
   }
 }
 
-function setError(message) {
+function showError(message) {
   el("empty").hidden = true;
   el("report").hidden = false;
   el("report-state").textContent = "ERROR";
-  el("summary").textContent = message;
+  el("report-state").className = "badge-status error";
+  el("summary").textContent = "Diagnostic Error: " + message;
   el("findings").replaceChildren();
   el("model-state").textContent = "Unavailable";
   el("model-results").replaceChildren();
   el("limitations").textContent = "";
 }
 
-function render(data) {
+function renderReport(data) {
   el("empty").hidden = true;
   el("report").hidden = false;
   el("report-state").textContent = "COMPLETE";
-  const n = data.finding_count;
-  el("summary").textContent = n
-    ? n + " evidence-based finding" + (n === 1 ? "" : "s") + " detected. Review each finding before acting."
-    : "No supported diagnostic rules fired. This is not a clean bill of health.";
-  const root = el("findings");
-  root.replaceChildren();
+  el("report-state").className = "badge-status complete";
+
+  const count = data.finding_count || 0;
+  const summaryBox = el("summary");
+  if (count > 0) {
+    summaryBox.textContent = `Identified ${count} deterministic compatibility finding${count === 1 ? "" : "s"}. Review each finding and verification step below.`;
+  } else {
+    summaryBox.textContent = "No deterministic compatibility rules triggered. Note: Phase 1C does not evaluate un-implemented PyTorch or ELF loader probes; this is not proof of full compatibility.";
+  }
+
+  // Render Findings
+  const findingsContainer = el("findings");
+  findingsContainer.replaceChildren();
+
   (data.findings || []).forEach((finding) => {
-    const card = node("article", "result");
-    const heading = node("div", "result-heading");
-    appendText(heading, "h3", "", finding.title);
-    appendText(heading, "span", "severity " + finding.severity, severityOrder[finding.severity] || finding.severity);
-    card.appendChild(heading);
-    appendText(card, "div", "ruleid", finding.rule_id);
-    appendText(card, "p", "", finding.interpretation);
-    const list = node("ul");
-    (finding.evidence || []).forEach((fact) => appendText(list, "li", "", fact));
-    card.appendChild(list);
-    appendText(card, "p", "check", "VERIFY: " + finding.verification);
-    root.appendChild(card);
+    const card = createNode("article", "finding-card");
+
+    const header = createNode("div", "finding-header");
+    const title = createNode("h3", "finding-title", finding.title);
+    const severityPill = createNode(
+      "span",
+      "severity-pill " + (finding.severity || "low"),
+      severityLabels[finding.severity] || finding.severity
+    );
+    header.appendChild(title);
+    header.appendChild(severityPill);
+    card.appendChild(header);
+
+    const ruleId = createNode("div", "finding-ruleid", `RULE ID: ${finding.rule_id}`);
+    card.appendChild(ruleId);
+
+    const interpretation = createNode("p", "finding-interpretation", finding.interpretation);
+    card.appendChild(interpretation);
+
+    if (finding.evidence && finding.evidence.length > 0) {
+      const list = createNode("ul", "evidence-list");
+      finding.evidence.forEach((item) => {
+        list.appendChild(createNode("li", "", item));
+      });
+      card.appendChild(list);
+    }
+
+    if (finding.verification) {
+      const verifyBox = createNode("div", "verification-box");
+      verifyBox.appendChild(createNode("span", "verification-label", "DETERMINISTIC VERIFICATION:"));
+      verifyBox.appendChild(document.createTextNode(finding.verification));
+      card.appendChild(verifyBox);
+    }
+
+    findingsContainer.appendChild(card);
   });
-  el("model-state").textContent = {
-    completed: "Live response",
-    not_configured: "Key not configured",
-    not_requested: "Disabled",
-    no_supported_findings: "No supported findings",
-    rate_limited: "Demo request limit",
-    provider_error: "Provider unavailable"
-  }[data.ai_status] || data.ai_status;
-  const modelBox = el("model-results");
-  modelBox.replaceChildren();
+
+  // Render Model Explanations
+  const modelBadge = el("model-state");
+  const modelResults = el("model-results");
+  modelResults.replaceChildren();
+
+  const statusMap = {
+    completed: "Live Inference",
+    not_configured: "Key Pending / Deterministic Only",
+    not_requested: "Opted Out",
+    no_supported_findings: "No Findings to Explain",
+    rate_limited: "Budget / Rate Limit Reached",
+    provider_error: "Provider Service Error",
+  };
+  modelBadge.textContent = statusMap[data.ai_status] || data.ai_status;
+
   if (data.ai_status === "completed") {
-    appendText(modelBox, "p", "", "Model: " + data.ai_model + " on Nebius Token Factory. Explanations are AI-generated and have not been independently proven.");
-    (data.ai_explanations || []).forEach((row) => {
-      const item = node("div", "model-item");
-      appendText(item, "strong", "", row.rule_id);
-      appendText(item, "p", "", row.explanation);
-      modelBox.appendChild(item);
+    const headerP = createNode("p", "", `Model: ${data.ai_model} via Nebius Token Factory. Explanations are AI-generated and strictly grounded in the verified finding IDs below.`);
+    modelResults.appendChild(headerP);
+
+    (data.ai_explanations || []).forEach((item) => {
+      const aiItem = createNode("div", "ai-item");
+
+      const head = createNode("div", "ai-item-head");
+      head.appendChild(createNode("span", "ai-item-ruleid", `Finding: ${item.rule_id}`));
+      aiItem.appendChild(head);
+
+      aiItem.appendChild(createNode("p", "", item.explanation));
+
+      if (item.suggested_check) {
+        const cmdBox = createNode("div", "suggested-cmd-box");
+        const info = createNode("div", "suggested-cmd-info");
+        info.appendChild(createNode("span", "suggested-cmd-label", "PROPOSED VERIFICATION (Nemotron selected from allowlist):"));
+        const codeElem = createNode("code", "", item.suggested_check);
+        info.appendChild(codeElem);
+        cmdBox.appendChild(info);
+
+        const copyBtn = createNode("button", "copy-btn", "Copy Command");
+        copyBtn.type = "button";
+        copyBtn.addEventListener("click", () => copyToClipboard(item.suggested_check, copyBtn));
+        cmdBox.appendChild(copyBtn);
+
+        aiItem.appendChild(cmdBox);
+      }
+
+      modelResults.appendChild(aiItem);
     });
   } else if (data.ai_status === "not_configured") {
-    appendText(modelBox, "p", "", "The server has no NEBIUS_API_KEY. Deterministic findings remain available, but no model call was made.");
-  } else if (data.ai_status === "provider_error") {
-    appendText(modelBox, "p", "", data.ai_error || "Live model call failed.");
+    modelResults.appendChild(createNode("p", "", "Nebius Token Factory API key is currently pending account approval. The server is operating in 100% offline deterministic mode. When NEBIUS_API_KEY is configured, NVIDIA Nemotron 120B explanations will appear here."));
+    modelResults.appendChild(createNode("p", "", "To test real inference after your key arrives, configure NEBIUS_API_KEY in .env and run: python -m stacklens_ai.preflight --smoke-test"));
   } else if (data.ai_status === "rate_limited") {
-    appendText(modelBox, "p", "", "The public demo's inference budget or per-minute limit has been reached. Try later.");
+    modelResults.appendChild(createNode("p", "", data.ai_error || "Inference rate limit or process call budget reached. Please try again shortly."));
+  } else if (data.ai_status === "provider_error") {
+    modelResults.appendChild(createNode("p", "", `Nebius Token Factory Error: ${data.ai_error || "Service unavailable."}`));
   } else {
-    appendText(modelBox, "p", "", "No model response requested. The deterministic diagnosis is shown above.");
+    modelResults.appendChild(createNode("p", "", "Model explanation was not requested. Deterministic findings are shown above."));
   }
-  el("limitations").textContent = data.note;
+
+  el("limitations").textContent = data.note || "";
 }
 
-async function analyze() {
+async function handleAnalyze() {
   const button = el("analyze");
   try {
-    let snapshot;
+    let parsedSnapshot;
     try {
-      snapshot = JSON.parse(el("snapshot").value);
+      parsedSnapshot = JSON.parse(el("snapshot").value);
     } catch {
-      throw new Error("Invalid JSON. Load a sample or paste a StackLens snapshot.");
+      throw new Error("Invalid JSON format. Please load a sample scenario or paste valid JSON.");
     }
+
     button.disabled = true;
-    button.textContent = "Analyzing…";
+    button.innerHTML = "<span>Analyzing...</span>";
     el("report-state").textContent = "RUNNING";
+    el("report-state").className = "badge-status running";
+
     const response = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ snapshot, use_ai: el("use-ai").checked })
+      body: JSON.stringify({
+        snapshot: parsedSnapshot,
+        use_ai: el("use-ai").checked,
+      }),
     });
+
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Analysis failed.");
-    render(data);
-  } catch (error) {
-    setError(error.message || String(error));
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status} from analysis endpoint`);
+    }
+
+    renderReport(data);
+  } catch (err) {
+    showError(err.message || String(err));
   } finally {
     button.disabled = false;
-    button.replaceChildren(document.createTextNode("Analyze snapshot ↗"));
+    button.innerHTML = '<span>Analyze Snapshot</span><span class="btn-arrow">→</span>';
   }
 }
 
-sampleButtons.forEach((button) => button.addEventListener("click", () => loadExample(button.dataset.example)));
-el("analyze").addEventListener("click", analyze);
+// Event Listeners
+sampleButtons.forEach((btn) => {
+  btn.addEventListener("click", () => loadExample(btn.dataset.example));
+});
+
+el("analyze").addEventListener("click", handleAnalyze);
+
 el("file").addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
-  if (file.size > 256 * 1024) return setError("This demo accepts JSON snapshots up to 256 KiB.");
-  el("snapshot").value = await file.text();
-  sampleButtons.forEach((button) => button.classList.remove("active"));
+  if (file.size > 256 * 1024) {
+    return showError("Snapshot file exceeds maximum allowed demo size of 256 KiB.");
+  }
+  try {
+    el("snapshot").value = await file.text();
+    sampleButtons.forEach((btn) => btn.classList.remove("active"));
+  } catch (err) {
+    showError("Could not read file: " + err.message);
+  }
 });
+
+// Initial Setup
 loadExample("driver");
-fetch("/api/health").then((r) => r.json()).then((data) => {
-  el("live-status").textContent = data.ai_configured ? "NEMOTRON AVAILABLE" : "MODEL KEY REQUIRED";
-  el("live-status").classList.toggle("off", !data.ai_configured);
-}).catch(() => {
-  el("live-status").textContent = "SERVICE UNAVAILABLE";
-  el("live-status").classList.add("off");
-});
+
+fetch("/api/health")
+  .then((res) => res.json())
+  .then((data) => {
+    const statusElem = el("live-status");
+    const textElem = el("status-text");
+    if (data.ai_configured) {
+      textElem.textContent = "NEMOTRON ACTIVE";
+      statusElem.className = "status";
+      statusElem.title = `Model: ${data.nebius_model} on Nebius Token Factory`;
+    } else {
+      textElem.textContent = "OFFLINE (KEY PENDING)";
+      statusElem.className = "status off";
+      statusElem.title = "Nebius Token Factory key is pending approval. Deterministic diagnostics fully operational.";
+    }
+  })
+  .catch(() => {
+    const statusElem = el("live-status");
+    const textElem = el("status-text");
+    textElem.textContent = "BACKEND DISCONNECTED";
+    statusElem.className = "status error";
+  });

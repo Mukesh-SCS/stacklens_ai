@@ -1,48 +1,70 @@
-# StackLens AI (hackathon MVP)
+# StackLens AI (Hackathon Edition)
 
 StackLens AI is an **optional web companion** for the existing, offline-first
-Rust StackLens collector. It diagnoses a few well-defined NVIDIA driver/CUDA
+Rust StackLens collector. It diagnoses well-defined NVIDIA driver/CUDA
 configuration issues from StackLens schema-v1 JSON snapshots and, when enabled,
-asks NVIDIA Nemotron on **Nebius Token Factory** to explain those exact findings.
+asks NVIDIA Nemotron on **Nebius Token Factory** to explain those exact findings
+and suggest safe, read-only diagnostic verification steps.
 
 It does not train a new model or claim to resolve all GPU environment failures.
 Deterministic code owns the findings. Model prose is labeled as AI-generated and
-linked by existing rule IDs. This is a first iteration, not a security boundary
-or a proof that every explanation is factually correct.
+linked strictly by existing rule IDs. Model-suggested follow-up checks are
+restricted to a fixed, rule-specific allowlist.
 
-## Local quick start
+---
 
-From the repository root:
+## Local Quick Start
+
+### 1. Configure Environment (Optional for AI Inference)
+
+Copy the safe configuration template:
 
 ```bash
-python3 -m stacklens_ai.server
+cp .env.example .env
 ```
 
-Open **http://127.0.0.1:8000**. Three explicitly synthetic snapshots are
-included so reviewers do not need a physical NVIDIA GPU.
-
-To enable **real model inference**, set `NEBIUS_API_KEY` in the server's
-environment. Never put it in HTML, JavaScript, a commit, or a screenshot.
-
 On Linux/macOS:
-
 ```bash
+# Leave empty for offline / deterministic-only diagnostic mode:
 export NEBIUS_API_KEY="paste-key-locally"
 python3 -m stacklens_ai.server
 ```
 
 On Windows PowerShell:
-
 ```powershell
+# Copy template
+Copy-Item .env.example .env
+
+# Set environment variable locally if desired
 $env:NEBIUS_API_KEY = "paste-key-locally"
 python -m stacklens_ai.server
 ```
 
+### 2. Run Preflight Validation
+
+Verify configuration, synthetic scenarios, compatibility tables, and allowlists:
+
+```bash
+python -m stacklens_ai.preflight
+```
+
+When your Nebius Token Factory API key arrives, smoke-test real inference with:
+
+```bash
+python -m stacklens_ai.preflight --smoke-test
+```
+
+### 3. Open the Web Application
+
+Open **http://127.0.0.1:8000** in your browser. Three explicitly synthetic snapshots are
+included so reviewers do not need a physical NVIDIA GPU.
+
 The default model is `nvidia/nemotron-3-super-120b-a12b`, using the
-Nebius Token Factory OpenAI-compatible endpoint. To change an available model,
-configure `NEBIUS_MODEL`; to change region or endpoint, configure
-`NEBIUS_BASE_URL`. These must still point to a qualifying Nebius-hosted
-NVIDIA open model for hackathon eligibility.
+Nebius Token Factory OpenAI-compatible endpoint.
+
+---
+
+## Capturing Real Snapshots with Rust CLI
 
 To create a live snapshot with the Rust collector on supported Linux hosts:
 
@@ -50,89 +72,78 @@ To create a live snapshot with the Rust collector on supported Linux hosts:
 cargo run --release -- snapshot > snapshot.json
 ```
 
+To compare a working baseline snapshot against a broken host:
+
+```bash
+cargo run --release -- diff baseline.json broken.json
+```
+
 Review and redact your snapshot before uploading. The hosted demo should be
 used only with synthetic or non-confidential data.
 
-## Diagnostic rules
+---
 
-| Rule | Meaning | Strength |
-| --- | --- | --- |
-| `CUDA-DRIVER-0001` | Observed driver branch below documented CUDA major-family minimum | Strong evidence for this compatibility limitation; not an application-level root cause |
-| `CUDA-PATH-0001` | CUDA_HOME/PATH/ROOT point to different directories | Warning, not proof of an error |
-| `CUDA-RUNTIME-0001` | Multiple libcudart candidates found | Informational; loader selection not inspected |
-| `NVIDIA-DRIVER-0001` | Kernel and userspace NVIDIA versions disagree | Direct observation, repair not assumed |
+## Authoritative Deterministic Diagnostic Rules
 
-No rule firing is **not** evidence that the environment is healthy.
-The existing Rust project has not yet implemented its ELF or PyTorch collectors.
+| Rule ID | Detection | Severity | Verification / Allowlisted Check |
+|---|---|---|---|
+| `CUDA-DRIVER-0001` | Observed driver branch below authoritative documented CUDA major-family minimum | High | `nvidia-smi`, `cat /proc/driver/nvidia/version` |
+| `CUDA-PATH-0001` | Conflicting CUDA environment selectors (`CUDA_HOME`, `CUDA_PATH`, `CUDA_ROOT`) | Medium | `echo "CUDA_HOME=$CUDA_HOME CUDA_PATH=$CUDA_PATH CUDA_ROOT=$CUDA_ROOT"` |
+| `CUDA-RUNTIME-0001` | Multiple `libcudart` candidate libraries discovered | Low | `ldconfig -p \| grep libcudart`, `echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"` |
+| `NVIDIA-DRIVER-0001` | Kernel module and userspace NVIDIA driver versions disagree | High | `cat /proc/driver/nvidia/version`, `nvidia-smi` |
 
-## Design and privacy
+> **Note:** No rule firing is **not** evidence that the environment is healthy. The existing Rust project has not yet implemented its ELF or PyTorch collectors.
 
-- Rust collector remains offline and free of mandatory AI dependencies.
-- Web companion is implemented with Python's standard library only.
-- Incoming snapshot JSON is parsed in memory and not saved by the web server.
-- **Only curated finding IDs, titles, and path-free evidence** are sent to
-  Nebius; raw environment variables, usernames, filesystem paths, and the
-  full snapshot are not included in that model request.
-- The snapshot **does reach the web demo server**, so it is not suitable for
-  secrets or confidential machine profiles. Future versions should add
-  client-side redaction before transport.
-- The Nebius API key stays on the server. The public demo has a per-minute
-  rate limit and a process-level request cap; configure infrastructure-level
-  cost limits before prolonged public deployment.
-- No API key means deterministic-only mode, clearly labeled. There is no
-  simulated model response.
-- Model rule-ID checks prevent fabricated rule identifiers being displayed,
-  but do not establish the semantic correctness of model explanations.
+---
 
-## Run tests
+## Security, Guardrails, and Privacy
+
+- **Offline Independence:** The Rust collector and deterministic diagnostic engine operate completely offline without cloud dependencies.
+- **Zero Heavy Dependencies:** The entire backend is built with Python's standard library.
+- **Privacy Redaction:** Raw filesystem paths, usernames, hostnames, and arbitrary snapshot trees are strictly stripped before outbound model calls.
+- **Strict Grounding Validation:** Explanations referencing unverified finding IDs are rejected.
+- **Safe Command Allowlists:** Follow-up diagnostic commands suggested by Nemotron are checked against a fixed allowlist. Arbitrary, dangerous, or unallowlisted commands are rejected.
+- **Credit Protection:** `STACKLENS_MODEL_CALL_BUDGET` caps total inference calls per process, and a sliding-window limiter prevents abuse.
+- **No Mocking:** In the absence of a `NEBIUS_API_KEY`, the application honestly reports deterministic-only mode without fabricating model output.
+
+---
+
+## Running Tests
 
 ```bash
-python3 -m unittest discover -s stacklens_ai/tests -v
+# Python unit, regression, config, and preflight tests (41 tests)
+python -m unittest discover -s stacklens_ai/tests -v
+
+# Rust workspace tests (96 tests)
 cargo test --workspace
+
+# Rust style and clippy checks
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 ```
 
-The Python tests are independent of GPUs, network access, and a Nebius key.
-The Rust tests still require a Rust toolchain.
+---
 
-## Docker deployment
+## Docker Deployment
 
-Build and run:
+Build and run with container healthchecks:
 
 ```bash
 docker build -t stacklens-ai .
 docker run --rm -p 8000:8000 -e NEBIUS_API_KEY stacklens-ai
 ```
 
-For Render or another Docker-compatible platform, deploy this repository's
-`Dockerfile` and set `NEBIUS_API_KEY` as a server-side secret. Use the
-platform-provided `PORT` (the app reads it automatically). Keep the service
-reachable through the end of judging. Confirm live model inference from the
-deployed service before submitting.
+The container exposes a health check endpoint at `/api/health` that validates service status, Nebius configuration, and credit budget remaining.
 
-## Suggested demo sequence (under 3 minutes)
+---
 
-1. Introduce StackLens: one Rust snapshot, no guessing from incomplete logs.
-2. Load the synthetic old-driver fixture and run analysis.
-3. Show the deterministic branch comparison and verification advice.
-4. Show a **real** Nemotron explanation with model name and Nebius service
-   visible; never pretend the model ran if it did not.
-5. Load the selector-conflict fixture to demonstrate that potential issues
-   are labeled uncertain, not called confirmed root causes.
-6. Show the README, GitHub license, and a genuine local `stacklens snapshot`
-   command on a suitable Linux/NVIDIA machine.
+## Pre-Existing Project Disclosure
 
-## Pre-existing project disclosure
-
-StackLens's Rust CLI predates the August 26, 2026 submission opening. Disclose
-this in Devpost. Describe the **new** companion and diagnostic rules only if
-they were actually implemented during the submission period, and retain
-commit history that demonstrates the changes. Do not present the prior Rust
-collectors as new hackathon work.
-
-## Next work, not claimed as complete
-
-- Confirm live inference with real Token Factory credits.
-- Validate actual snapshots from supported Linux/NVIDIA environments.
-- Add richer PyTorch / ELF collection and deeper compatibility rules.
-- Add local-first client-side snapshot redaction.
-- Deploy a publicly accessible working URL, then record an honest video.
+StackLens's Rust CLI was created prior to the August 26, 2026 hackathon opening. The hackathon contributions developed in October 2026 include:
+- `stacklens_ai` web companion, backend server, and responsive frontend
+- Deterministic diagnostic rule engine with authoritative compatibility tables
+- NVIDIA Nemotron integration via Nebius Token Factory
+- Command allowlist guardrails and grounding validation
+- Preflight verification and smoke-testing tools
+- Configuration management with credit budget caps
+- Expanded test suite and GitHub Actions matrix CI

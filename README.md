@@ -9,18 +9,31 @@ Status: **early development**
 ## StackLens AI hackathon companion (October 2026)
 
 The optional [StackLens AI web companion](stacklens_ai/README.md) accepts the
-existing JSON snapshot format, applies conservative deterministic rules, and
-can request evidence-linked NVIDIA Nemotron explanations through **Nebius Token
-Factory**. The original Rust CLI stays offline-capable; model inference is
-explicitly opt-in and is not required for the CLI.
+existing JSON snapshot format, applies conservative deterministic rules with
+authoritative compatibility tables, and can request evidence-linked NVIDIA Nemotron
+explanations through **Nebius Token Factory** with allowlisted read-only verification checks.
+The original Rust CLI stays offline-capable; model inference is explicitly opt-in.
 
-Quick start: `python3 -m stacklens_ai.server` from the repository root.
+Quick start:
+```bash
+# 1. Run offline preflight validation
+python -m stacklens_ai.preflight
+
+# 2. Start the companion server
+python -m stacklens_ai.server
+```
+
 Open `http://127.0.0.1:8000`, load one of the three synthetic examples, and
-select **Analyze snapshot**. Configure server-side `NEBIUS_API_KEY` for live
-model calls. Without a key the UI correctly reports deterministic-only mode.
+select **Analyze Snapshot**. Configure server-side `NEBIUS_API_KEY` in `.env` for live
+model calls. Without a key, the application operates in 100% offline deterministic mode.
 
-See the companion README for API configuration, privacy caveats, tests, and
-deployment details.
+When your Nebius Token Factory key arrives, test live inference with:
+```bash
+python -m stacklens_ai.preflight --smoke-test
+```
+
+See the [companion README](stacklens_ai/README.md) for full configuration, guardrails,
+test procedures, and Docker deployment details.
 
 ## Motivation
 

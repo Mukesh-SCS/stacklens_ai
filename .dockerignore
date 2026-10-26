@@ -1,0 +1,46 @@
+# Git & GitHub
+.git
+.github
+
+# Rust workspace artifacts & toolchain configs
+target/
+target-*/
+crates/
+fixtures/
+rules/
+Cargo.lock
+Cargo.toml
+rust-toolchain.toml
+rustfmt.toml
+*.pdb
+*.rs.bk
+
+# Documentation & notes
+docs/
+project_plan.md
+
+# Secrets and local environments
+.env
+.env.*
+!.env.example
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor & OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.log

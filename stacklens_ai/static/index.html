@@ -3,53 +3,198 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="StackLens AI: evidence-grounded GPU and CUDA diagnostics with NVIDIA Nemotron on Nebius Token Factory.">
-  <title>StackLens AI | Evidence-grounded GPU diagnostics</title>
+  <meta name="description" content="StackLens AI: Evidence-grounded GPU and CUDA troubleshooting powered by NVIDIA Nemotron on Nebius Token Factory.">
+  <title>StackLens AI | Evidence-Grounded GPU & CUDA Forensics</title>
   <link rel="stylesheet" href="/styles.css">
   <script defer src="/app.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brandmark">S<span class="branddot">.</span></span><span>StackLens <b>AI</b></span></div>
-    <div class="top-right"><span class="version">HACKATHON BUILD · 2026</span><span id="live-status" class="status">Checking model...</span></div>
+    <div class="brand">
+      <span class="brandmark">S<span class="branddot">.</span></span>
+      <span>StackLens <b>AI</b></span>
+    </div>
+    <div class="top-right">
+      <span class="hackathon-tag">NEBIUS × NVIDIA GLOBAL AI HACKATHON</span>
+      <div id="live-status" class="status checking" title="Status of NVIDIA Nemotron on Nebius Token Factory">
+        <span class="status-dot"></span>
+        <span id="status-text">Checking Nebius...</span>
+      </div>
+    </div>
   </header>
+
   <main>
     <section class="hero">
-      <p class="eyebrow">RUNTIME FORENSICS / NVIDIA COMPUTE</p>
-      <h1>Stop guessing.<br><span>Inspect the evidence.</span></h1>
-      <p class="lede">Diagnose GPU, CUDA, and NVIDIA driver configuration issues with deterministic checks and optional evidence-linked explanations from Nemotron on Nebius.</p>
-      <div class="chips"><span>Rust snapshot format</span><span>NVIDIA Nemotron</span><span>Nebius Token Factory</span><span>Evidence first</span></div>
+      <div class="hero-badge">OFFLINE RUST COLLECTOR + NEBIUS TOKEN FACTORY AGENT</div>
+      <h1>Evidence-Grounded<br><span class="gradient-text">GPU & CUDA Troubleshooting</span></h1>
+      <p class="lede">
+        AI compute failures are stack failures. StackLens inspects NVIDIA drivers, CUDA toolkits, and runtime libraries,
+        runs deterministic compatibility checks, and grounds NVIDIA Nemotron explanations strictly in observed evidence.
+      </p>
+      <div class="chips">
+        <span class="chip"><span class="chip-k">Core:</span> Rust CLI (Offline-First)</span>
+        <span class="chip"><span class="chip-k">Model:</span> nvidia/nemotron-3-super-120b-a12b</span>
+        <span class="chip"><span class="chip-k">Platform:</span> Nebius Token Factory</span>
+        <span class="chip"><span class="chip-k">Safety:</span> Read-Only Allowlist</span>
+      </div>
     </section>
-    <section class="workspace" aria-label="Diagnostic workspace">
+
+    <!-- Three Architectural Pillars -->
+    <section class="pillars" aria-label="System Architecture">
+      <div class="pillar-card">
+        <span class="pillar-num">01 / OBSERVE</span>
+        <h3>Deterministic Collection</h3>
+        <p>Standalone Rust binary inspects sysfs, <code>/proc</code>, drivers, and CUDA toolkits without cloud dependencies.</p>
+      </div>
+      <div class="pillar-card">
+        <span class="pillar-num">02 / INFER</span>
+        <h3>Authoritative Rules</h3>
+        <p>Local compatibility tables evaluate driver branches and environment selectors independently of LLM hallucinations.</p>
+      </div>
+      <div class="pillar-card">
+        <span class="pillar-num">03 / RECOMMEND</span>
+        <h3>Grounded AI Explanation</h3>
+        <p>NVIDIA Nemotron explains verified finding IDs and suggests safe, read-only diagnostic checks from a strict allowlist.</p>
+      </div>
+    </section>
+
+    <!-- Main Workspace -->
+    <section class="workspace" aria-label="Diagnostic Workspace">
+      <!-- Input Panel -->
       <div class="panel input-panel">
-        <div class="panel-head"><div><p class="step">01 / INPUT</p><h2>Choose a snapshot</h2></div><span class="counter">SCHEMA V1</span></div>
-        <p class="help">Load a synthetic scenario, upload a StackLens JSON snapshot, or paste JSON directly.</p>
-        <div class="sample-grid">
-          <button type="button" data-example="driver" class="sample active"><span class="sample-icon">01</span><strong>Outdated driver</strong><small>CUDA family minimum</small></button>
-          <button type="button" data-example="selectors" class="sample"><span class="sample-icon">02</span><strong>Conflicting paths</strong><small>CUDA selectors</small></button>
-          <button type="button" data-example="components" class="sample"><span class="sample-icon">03</span><strong>Driver mismatch</strong><small>Kernel vs userspace</small></button>
+        <div class="panel-head">
+          <div>
+            <p class="step">STAGE 01 / INPUT</p>
+            <h2>Environment Snapshot</h2>
+          </div>
+          <span class="badge-schema">SCHEMA V1</span>
         </div>
-        <div class="labelrow"><label for="snapshot">Environment snapshot JSON</label><label class="upload" for="file"><span>↥</span> Upload .json</label></div>
+        <p class="help">
+          Select one of three synthetic demonstration scenarios, upload a JSON snapshot from <code>stacklens snapshot</code>, or paste custom JSON below.
+        </p>
+
+        <div class="sample-grid" role="group" aria-label="Synthetic Scenarios">
+          <button type="button" data-example="driver" class="sample active" id="btn-sample-driver">
+            <span class="sample-num">SCENARIO 01</span>
+            <strong>Outdated Driver</strong>
+            <small>Driver 470 vs CUDA 12.x minimum</small>
+          </button>
+          <button type="button" data-example="selectors" class="sample" id="btn-sample-selectors">
+            <span class="sample-num">SCENARIO 02</span>
+            <strong>Conflicting Paths</strong>
+            <small>CUDA_HOME vs CUDA_PATH disagreement</small>
+          </button>
+          <button type="button" data-example="components" class="sample" id="btn-sample-components">
+            <span class="sample-num">SCENARIO 03</span>
+            <strong>Driver Mismatch</strong>
+            <small>Kernel module vs userspace version</small>
+          </button>
+        </div>
+
+        <div class="labelrow">
+          <label for="snapshot">Snapshot JSON (Schema v1)</label>
+          <label class="upload-btn" for="file">
+            <span>↥</span> Upload Snapshot .json
+          </label>
+        </div>
         <input id="file" type="file" accept=".json,application/json" hidden>
-        <textarea id="snapshot" spellcheck="false" placeholder="Paste a StackLens snapshot here..." aria-label="Environment snapshot JSON"></textarea>
+        <textarea id="snapshot" spellcheck="false" placeholder="Paste a StackLens JSON snapshot here..." aria-label="Environment snapshot JSON"></textarea>
+
         <div class="action-row">
-          <label class="toggle"><input id="use-ai" type="checkbox" checked><span>Explain with Nemotron</span></label>
-          <button class="primary" type="button" id="analyze">Analyze snapshot <span>↗</span></button>
+          <label class="toggle" title="Request explanation from NVIDIA Nemotron via Nebius Token Factory">
+            <input id="use-ai" type="checkbox" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Explain with NVIDIA Nemotron</span>
+          </label>
+          <button class="primary-btn" type="button" id="analyze">
+            <span>Analyze Snapshot</span>
+            <span class="btn-arrow">→</span>
+          </button>
         </div>
-        <p class="privacy">Privacy: submitted snapshots reach this demo server. Only curated, path-free findings are sent onward to Nemotron. Do not upload confidential snapshots to a public deployment.</p>
+
+        <div class="privacy-notice">
+          <strong>Privacy & Security:</strong> Submitted snapshots are evaluated in memory on the demo server and are never saved to disk. Only curated finding IDs and path-free evidence are forwarded to Nebius Token Factory. Raw machine environment variables and private paths are never sent.
+        </div>
       </div>
+
+      <!-- Report Panel -->
       <div class="panel report-panel">
-        <div class="panel-head"><div><p class="step">02 / ANALYSIS</p><h2>Diagnostic report</h2></div><span id="report-state" class="counter">READY</span></div>
-        <div id="empty" class="empty"><div class="orbit"><span>⌕</span></div><h3>Waiting for evidence</h3><p>Choose a scenario and run the analysis to see grounded findings, verification steps, and optional model explanations.</p></div>
-        <div id="report" hidden><div id="summary" class="summary"></div><div id="findings"></div><div class="model-box"><div class="model-heading">NVIDIA NEMOTRON <span id="model-state"></span></div><div id="model-results"></div></div><p class="note" id="limitations"></p></div>
+        <div class="panel-head">
+          <div>
+            <p class="step">STAGE 02 / DIAGNOSTICS</p>
+            <h2>Inspection Report</h2>
+          </div>
+          <span id="report-state" class="badge-status ready">READY</span>
+        </div>
+
+        <div id="empty" class="empty-state">
+          <div class="radar-box">
+            <span class="radar-icon">⌕</span>
+          </div>
+          <h3>Awaiting Environment Data</h3>
+          <p>Choose a scenario and click <strong>Analyze Snapshot</strong> to execute deterministic compatibility rules and evidence-grounded AI explanations.</p>
+        </div>
+
+        <div id="report" class="report-content" hidden>
+          <div id="summary" class="summary-box"></div>
+
+          <div class="section-title">
+            <span>DETERMINISTIC COMPATIBILITY FINDINGS</span>
+          </div>
+          <div id="findings" class="findings-container"></div>
+
+          <!-- Nemotron AI Block -->
+          <div class="ai-box">
+            <div class="ai-box-head">
+              <div class="ai-title">
+                <span class="ai-logo">⚡</span>
+                <span>NVIDIA NEMOTRON EXPLANATION</span>
+              </div>
+              <span id="model-state" class="model-badge">Checking...</span>
+            </div>
+            <div id="model-results" class="ai-results"></div>
+          </div>
+
+          <p class="limitations-note" id="limitations"></p>
+        </div>
       </div>
     </section>
-    <section class="method">
-      <div><span class="method-num">01</span><h3>Observe</h3><p>Collect actual host, driver, and CUDA configuration using the standalone Rust CLI.</p></div>
-      <div><span class="method-num">02</span><h3>Verify</h3><p>Run deterministic, bounded rules that separate confirmed facts from potential causes.</p></div>
-      <div><span class="method-num">03</span><h3>Explain</h3><p>Use an open NVIDIA model on Nebius to translate those findings into actionable engineering context.</p></div>
+
+    <!-- Forensic Snapshot Workflow & Diff -->
+    <section class="cli-workflow">
+      <div class="cli-head">
+        <h2>Offline Forensic Workflow & Snapshot Diffing</h2>
+        <p>Use the standalone Rust CLI on Linux/NVIDIA hosts to capture and diff snapshots before and after cluster updates:</p>
+      </div>
+      <div class="code-examples">
+        <div class="code-card">
+          <span class="code-label">Capture Environment Snapshot</span>
+          <code>stacklens snapshot > host-before.json</code>
+          <p>Collects host, sysfs, /proc, nvidia-smi, nvcc, and toolkit metadata into deterministic schema-v1 JSON.</p>
+        </div>
+        <div class="code-card">
+          <span class="code-label">Diff Working vs Broken Host</span>
+          <code>stacklens diff host-before.json host-after.json</code>
+          <p>Highlights exact driver branch differences, CUDA selector shifts, and missing runtime libraries.</p>
+        </div>
+        <div class="code-card">
+          <span class="code-label">Smoke-Test Real Inference</span>
+          <code>python -m stacklens_ai.preflight --smoke-test</code>
+          <p>Verifies your Nebius Token Factory API key and tests live inference against Nemotron 120B.</p>
+        </div>
+      </div>
     </section>
   </main>
-  <footer><span>STACKLENS AI · AN OPTIONAL COMPANION TO THE OFFLINE RUST TOOL</span><span>Diagnostic assistance is not proof of full compatibility.</span></footer>
+
+  <footer>
+    <div class="footer-inner">
+      <div>
+        <strong>STACKLENS AI</strong> — Evidence-Grounded GPU Forensics for the Nebius × NVIDIA Global AI Hackathon.
+      </div>
+      <div class="footer-disclaimer">
+        Separation of Observation, Inference, and Recommendation. Model explanations are strictly linked to verified finding IDs.
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
