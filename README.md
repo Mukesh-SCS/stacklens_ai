@@ -1,172 +1,213 @@
 # StackLens
 
-StackLens is a Rust-native diagnostic and forensic toolkit for AI compute environments.
+StackLens inspects GPU and AI runtime environments and reports **evidence**, not guesses.
 
-It inspects GPU and AI runtime environments and reports evidence for configuration and compatibility problems.
+This repo has two parts:
 
-Status: **early development**
+1. **StackLens AI** — a local web app that diagnoses NVIDIA driver / CUDA issues from a JSON snapshot. This is the fastest way to try the project.
+2. **`stacklens` CLI** — a Rust collector that captures a live machine snapshot (Linux first). Optional if you only want to run the web demo.
 
-## StackLens AI hackathon companion (October 2026)
+No pip packages are required for StackLens AI. It uses Python’s standard library only.
 
-The optional [StackLens AI web companion](stacklens_ai/README.md) accepts the
-existing JSON snapshot format, applies conservative deterministic rules with
-authoritative compatibility tables, and can request evidence-linked NVIDIA Nemotron
-explanations through **Nebius Token Factory** with allowlisted read-only verification checks.
-The original Rust CLI stays offline-capable; model inference is explicitly opt-in.
+---
 
-Quick start:
+## Run StackLens AI
+
+### Requirements
+
+- Python 3.10 or newer
+- A browser
+- (Optional) a [Nebius Token Factory](https://tokenfactory.nebius.com) API key for NVIDIA Nemotron explanations
+
+You do **not** need an NVIDIA GPU to try the demo. Three synthetic snapshots are included.
+
+### 1. Open a terminal in this folder
+
+```powershell
+cd path\to\stacklens
+```
+
+On macOS or Linux:
+
 ```bash
-# 1. Run offline preflight validation
-python -m stacklens_ai.preflight
+cd path/to/stacklens
+```
 
-# 2. Start the companion server
+### 2. (Optional) copy the env file
+
+Works fully offline without a key. Copy the template only if you want AI explanations later.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+```bash
+cp .env.example .env
+```
+
+Leave `NEBIUS_API_KEY` empty for deterministic-only mode. To enable Nemotron, put your key in `.env`:
+
+```text
+NEBIUS_API_KEY=your-key-here
+NEBIUS_MODEL=nvidia/nemotron-3-super-120b-a12b
+```
+
+### 3. Check that everything is in place
+
+```powershell
+python -m stacklens_ai.preflight
+```
+
+```bash
+python3 -m stacklens_ai.preflight
+```
+
+You should see `[PASS]` checks. `[INFO] Nebius API Key - Empty` is expected if you skipped the key.
+
+### 4. Start the server
+
+```powershell
 python -m stacklens_ai.server
 ```
 
-Open `http://127.0.0.1:8000`, load one of the three synthetic examples, and
-select **Analyze Snapshot**. Configure server-side `NEBIUS_API_KEY` in `.env` for live
-model calls. Without a key, the application operates in 100% offline deterministic mode.
-
-When your Nebius Token Factory key arrives, test live inference with:
 ```bash
+python3 -m stacklens_ai.server
+```
+
+You should see:
+
+```text
+StackLens AI server listening on http://127.0.0.1:8000
+Mode: OFFLINE / DETERMINISTIC ONLY
+```
+
+or `Mode: NVIDIA Nemotron (...)` if a key is configured.
+
+### 5. Open the app
+
+In your browser go to:
+
+**http://127.0.0.1:8000**
+
+Then:
+
+1. Pick one of the three example snapshots (driver too old, selector conflict, or driver component mismatch).
+2. Click **Analyze Snapshot**.
+3. Read the deterministic findings (rule IDs such as `CUDA-DRIVER-0001`).
+4. If you configured a Nebius key, you can request an evidence-linked Nemotron explanation. Without a key, findings still appear; there is no fake AI output.
+
+Stop the server with `Ctrl+C`.
+
+### If Python is not found
+
+Windows:
+
+```powershell
+py -3 -m stacklens_ai.preflight
+py -3 -m stacklens_ai.server
+```
+
+Confirm the version:
+
+```powershell
+python --version
+```
+
+---
+
+## What the demo examples show
+
+| Example | What it demonstrates |
+| --- | --- |
+| Driver too old | Driver branch below the documented CUDA family minimum (`CUDA-DRIVER-0001`) |
+| Selector conflict | `CUDA_HOME` / `CUDA_PATH` / `CUDA_ROOT` disagree, plus extra `libcudart` candidates |
+| Driver component mismatch | Kernel module and userspace NVIDIA driver versions disagree (`NVIDIA-DRIVER-0001`) |
+
+No finding firing does **not** mean the environment is healthy. The collector does not yet inspect ELF loader resolution or PyTorch.
+
+---
+
+## Optional: live NVIDIA Nemotron
+
+When `NEBIUS_API_KEY` is set, StackLens AI can ask NVIDIA Nemotron (`nvidia/nemotron-3-super-120b-a12b`) on Nebius Token Factory to explain **existing** findings and suggest **allowlisted, read-only** checks.
+
+Test the live connection:
+
+```powershell
 python -m stacklens_ai.preflight --smoke-test
 ```
 
-See the [companion README](stacklens_ai/README.md) for full configuration, guardrails,
-test procedures, and Docker deployment details.
+Guardrails:
 
-## Motivation
+- Findings come from local rules, not from the model.
+- Paths and usernames are stripped before any model call.
+- Suggested commands must match a fixed allowlist.
+- `STACKLENS_MODEL_CALL_BUDGET` (default 100) caps inference calls per server process.
 
-AI compute failures are usually stack failures, not single-package failures:
+---
 
-```text
-GPU
- ↓
-driver
- ↓
-CUDA
- ↓
-native libraries
- ↓
-PyTorch
- ↓
-containers
- ↓
-application
-```
-
-A problem at any layer can surface as a misleading error at another. StackLens gathers the relevant evidence in one place so the report can point at what was observed, not at a guess.
-
-## Principles
-
-- Rust-native standalone binary
-- Deterministic diagnostics
-- Evidence before conclusions
-- No required Python, Node.js, or JVM runtime
-- Offline-capable
-- No telemetry
-- Credential-like environment variables are not collected by default
-- Cross-platform roadmap; Linux is first
-
-## Current status
-
-Phase 1C. The `stacklens` binary collects host/OS information, Linux NVIDIA GPU/driver evidence (sysfs, `/proc/driver/nvidia/version`, and `nvidia-smi` CSV queries), and Linux CUDA toolkit/runtime evidence. It writes versioned JSON snapshots and diffs them.
-
-StackLens treats these as separate observations, not one "CUDA version":
-
-- NVIDIA driver
-- driver CUDA API capability
-- CUDA Toolkit
-- nvcc
-- CUDA runtime (`libcudart`)
-
-It does **not** yet inspect ELF loader resolution, PyTorch, or diagnostic rules. CUDA compatibility output is a data foundation only and is not a diagnosis.
-
-## Phase 1
-
-Initial focus:
-
-- Linux
-- NVIDIA
-- CUDA
-- PyTorch / LibTorch
-- ELF / shared-library diagnostics
-
-See [project_plan.md](project_plan.md) for milestones 1A–1F and later phases.
-
-## Commands
-
-| Command | Status | Purpose |
-| --- | --- | --- |
-| `stacklens doctor` | Partial | Host, NVIDIA/GPU, and CUDA facts; no compatibility conclusions |
-| `stacklens gpu` | Implemented | NVIDIA GPU and driver inspection from sysfs, `/proc`, and `nvidia-smi` |
-| `stacklens cuda` | Partial | CUDA toolkit, nvcc, runtime-candidate, and environment discovery |
-| `stacklens libs [PATH]` | Planned | ELF shared-library inspection |
-| `stacklens torch` | Planned | PyTorch / LibTorch inspection |
-| `stacklens snapshot` | Partial | Host, NVIDIA/GPU, and CUDA fields; `libraries` and `torch` remain `not_implemented` |
-| `stacklens diff <LEFT> <RIGHT>` | Partial | Structural diff of two snapshots |
+## Optional: Docker
 
 ```bash
-stacklens --help
-stacklens doctor --help
-stacklens libs --help
+docker build -t stacklens-ai .
+docker run --rm -p 8000:8000 stacklens-ai
 ```
 
-## Example future workflow
+With a key:
 
 ```bash
-stacklens snapshot > server-good.json
-stacklens snapshot > server-bad.json
-stacklens diff server-good.json server-bad.json
+docker run --rm -p 8000:8000 -e NEBIUS_API_KEY=your-key-here stacklens-ai
 ```
 
-This is useful when a machine that worked yesterday does not work today, or when comparing a known-good host to a broken one. The diff is meant to highlight driver, CUDA, library path, and runtime differences instead of requiring a manual side-by-side review.
+Then open http://127.0.0.1:8000
 
-`snapshot` currently includes host data, NVIDIA/GPU probes, and CUDA discovery. Library and PyTorch fields remain `not_implemented`.
+---
 
-## Long-term roadmap
+## Optional: capture a real snapshot (Rust CLI)
 
-Later phases (not started):
-
-- NCCL, cuDNN, TensorRT
-- Containers and NVIDIA Container Toolkit
-- Windows, WSL, PE/COFF
-- AMD / ROCm
-- JAX, TensorFlow, ONNX Runtime, vLLM, TensorRT-LLM, llama.cpp, Candle
-- `stacklens bundle pytorch` report archives with secret redaction
-
-Details: [project_plan.md](project_plan.md).
-
-## Build
+On a Linux host with Rust installed:
 
 ```bash
-cargo build --release
+cargo run --release -p stacklens-cli -- snapshot > snapshot.json
 ```
 
-The binary is `stacklens`.
+Review and redact the file before uploading it in the web app. Raw snapshots can contain usernames and local paths (`PATH`, `LD_LIBRARY_PATH`, and similar).
 
-## Development
+Other CLI commands:
+
+```bash
+cargo run --release -p stacklens-cli -- doctor
+cargo run --release -p stacklens-cli -- gpu
+cargo run --release -p stacklens-cli -- cuda
+```
+
+The CLI is offline-capable. It does not call Nebius.
+
+---
+
+## Tests
+
+```powershell
+python -m unittest discover -s stacklens_ai/tests -v
+```
 
 ```bash
 cargo test --workspace
-cargo fmt --all
-cargo clippy --workspace --all-targets --all-features
 ```
 
-CI runs fmt, clippy (`-D warnings`), workspace tests, and a check against the declared MSRV. Tests do not require an NVIDIA GPU.
+---
 
 ## Privacy
 
-Environment collection is allowlisted. Tokens, API keys, and similar credentials are not read.
+- Environment collection is allowlisted. Tokens and API keys are not collected by the CLI.
+- StackLens AI does not send a snapshot to Nebius unless you enable AI and a key is configured.
+- A raw snapshot is still not automatically safe to publish. Review it before sharing.
 
-That does **not** make a raw snapshot safe to publish. Allowlisted values such as `PATH`, `LD_LIBRARY_PATH`, `PYTHONPATH`, `CONDA_PREFIX`, `VIRTUAL_ENV`, and `TORCH_HOME` often contain usernames and local filesystem paths.
-
-Review snapshots before sharing them. Stronger path redaction belongs to the future `bundle` / report work.
-
-## Contributing
-
-The project is early. Useful future contributions include diagnostic rules and reproducible fixtures (command output, ELF samples, snapshots). Open an issue or pull request if you want to work on something.
+---
 
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
+
+More implementation detail for the web companion: [stacklens_ai/README.md](stacklens_ai/README.md).
+The engineering roadmap lives in [project_plan.md](project_plan.md).
